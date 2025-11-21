@@ -1,6 +1,13 @@
 <template>
   <div class="container">
-    <h1>スキル分析ツール</h1>
+    <div class="top-bar">
+      <h1>スキル分析ツール</h1>
+      <NuxtLink to="/admin" class="admin-link">設定 →</NuxtLink>
+    </div>
+
+    <div class="current-prompt">
+      <span>使用中のプロンプト: <strong>{{ availablePrompts[selectedPromptId]?.name || '読み込み中...' }}</strong></span>
+    </div>
 
     <!-- サンプル選択 -->
     <div class="samples">
@@ -89,17 +96,28 @@ const inputText = ref<string>('')
 const result = ref<AnalysisResult | null>(null)
 const loading = ref<boolean>(false)
 const error = ref<string>('')
-
-const filteredResult = computed(() => {
-  if (!result.value) return {}
-  const { 総合評価, ...rest } = result.value
-  return rest
-})
+const selectedPromptId = ref('detailed')
+const availablePrompts = ref<Record<string, any>>({})
 
 function loadSample(index: number) {
   inputText.value = samples[index].text
   result.value = null
   error.value = ''
+}
+
+async function loadPrompts() {
+  try {
+    const data = await $fetch('/api/prompts/list')
+    availablePrompts.value = data.prompts
+
+    // LocalStorageから設定を読み込む
+    const saved = localStorage.getItem('defaultPromptId')
+    if (saved && availablePrompts.value[saved]) {
+      selectedPromptId.value = saved
+    }
+  } catch (error) {
+    console.error('Failed to load prompts:', error)
+  }
 }
 
 const analyze = async (): Promise<void> => {
@@ -115,9 +133,12 @@ const analyze = async (): Promise<void> => {
   try {
     const data = await $fetch<AnalysisResult>('/api/analyze', {
       method: 'POST',
-      body: { text: inputText.value }
+      body: {
+        text: inputText.value,
+        promptId: selectedPromptId.value
+      }
     })
-    result.value = data
+    result.value = data as Record<string, number>
   } catch (e) {
     console.error('分析エラー:', e)
     error.value = '分析に失敗しました'
@@ -125,6 +146,10 @@ const analyze = async (): Promise<void> => {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  loadPrompts()
+})
 </script>
 
 <style scoped>
@@ -219,5 +244,36 @@ button:hover:not(:disabled) {
   background-color: #fee;
   border: 1px solid #fcc;
   border-radius: 4px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.admin-link {
+  color: #0070f3;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.admin-link:hover {
+  text-decoration: underline;
+}
+
+.current-prompt {
+  padding: 12px;
+  background: #f0f7ff;
+  border-left: 4px solid #0070f3;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 14px;
+}
+
+.current-prompt strong {
+  color: #0070f3;
 }
 </style>

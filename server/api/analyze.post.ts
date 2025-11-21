@@ -1,7 +1,7 @@
 
 import { createError } from "h3"
 import {process} from "std-env";
-import { STRICT_CRITERIA_PROMPT } from "~/config/prompts"
+import { PRESET_PROMPTS } from "~/config/prompts"
 
 interface RequestBody {
   text: string
@@ -34,7 +34,7 @@ interface AnalysisResult {
 }
 
 export default defineEventHandler(async (event) => {
-  const { text }: RequestBody = await readBody(event)
+  const { text, promptId = 'detailed' } = await readBody(event)
 
   if (!text || text.trim().length === 0) {
     throw createError({
@@ -52,7 +52,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // プロンプト取得
+  const promptConfig = PRESET_PROMPTS[promptId]
+  if (!promptConfig) {
+    throw createError({
+      statusCode: 404,
+      message: 'プロンプトが見つかりません'
+    })
+  }
+
   try {
+    const prompt = promptConfig.prompt.replace('{TEXT}', text)
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -62,10 +73,11 @@ export default defineEventHandler(async (event) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        max_tokens: 2000,
+        temperature: 0.3,
         messages: [{
           role: 'user',
-          content: STRICT_CRITERIA_PROMPT.replace('{TEXT}', text)
+          content: prompt
         }]
       })
     })
