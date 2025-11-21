@@ -1,4 +1,4 @@
-export const ANALYSIS_PROMPT = `以下のテキストから、各スキルを0-100点で評価してください。
+export const BASIC_PROMPT = `以下のテキストから、各スキルを0-100点で評価してください。
 JSONオブジェクトのみで回答してください。他のテキストは不要です。
 
 テキスト:

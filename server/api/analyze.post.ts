@@ -1,7 +1,7 @@
 
 import { createError } from "h3"
 import {process} from "std-env";
-import { ANALYSIS_PROMPT } from "~/config/prompts"
+import { STRICT_CRITERIA_PROMPT } from "~/config/prompts"
 
 interface RequestBody {
   text: string
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: ANALYSIS_PROMPT.replace('{TEXT}', text)
+          content: STRICT_CRITERIA_PROMPT.replace('{TEXT}', text)
         }]
       })
     })
